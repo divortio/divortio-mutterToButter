@@ -1,0 +1,16 @@
+# Dockerfile for the full version with the Demucs AI extension
+
+# Use our pre-built lightweight image as a base
+FROM divortio-mutterToButter:lite
+
+# Set working directory
+WORKDIR /app
+
+# Copy the Demucs installer script
+COPY ./installers/install_demucs_alpine.sh .
+
+# Run the installer to add the Demucs/PyTorch layer
+RUN chmod +x ./install_demucs_alpine.sh &&
+  ./install_demucs_alpine.sh
+
+# The entrypoint is inherited from the base image, so we don't need to set it again.
