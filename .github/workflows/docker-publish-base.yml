@@ -1,10 +1,10 @@
-# This workflow builds and publishes the lightweight 'base' Docker image.
+# This workflow builds and publishes the STABLE 'base' Docker image
+# which contains the custom-compiled FFmpeg and all system dependencies.
 name: Docker Publish - Base
 
-# This workflow runs automatically on every push to the 'main' branch.
 on:
-  push:
-    branches: [ "main" ]
+  # This allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -32,6 +32,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/Dockerfile
+          # Point to the new Dockerfile for the base image
+          file: ./docker/Dockerfile.base
           push: true
+          # Tag the image with ':base'
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base

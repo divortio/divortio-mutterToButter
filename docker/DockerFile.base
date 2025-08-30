@@ -1,0 +1,85 @@
+#
+# Divortio Audio mutterToButter - STABLE BASE IMAGE
+#
+# This Dockerfile builds the foundational layer of the application. It compiles
+# a custom, lightweight FFmpeg and installs all necessary system-level
+# dependencies. This image should be built infrequently.
+#
+
+# --- Stage 1: The FFmpeg Builder ---
+FROM alpine:3.20 AS builder
+
+ENV FFMPEG_VERSION 7.0
+
+# Install all build-time dependencies
+RUN apk add --no-cache \
+    build-base \
+    nasm \
+    yasm \
+    lame-dev \
+    curl \
+    tar
+
+# Download and extract FFmpeg source code
+WORKDIR /usr/src
+RUN curl -sSL "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2" | \
+    tar -xj --strip-components=1
+
+# Configure and compile FFmpeg with a minimal set of features
+RUN ./configure \
+    --prefix=/usr/local \
+    --disable-everything \
+    --enable-gpl \
+    --enable-nonfree \
+    --enable-libmp3lame \
+    --enable-encoder=libmp3lame \
+    --enable-encoder=pcm_s16le \
+    --enable-decoder=aac \
+    --enable-decoder=mp3 \
+    --enable-decoder=pcm_s16le \
+    --enable-demuxer=aac \
+    --enable-demuxer=mov \
+    --enable-demuxer=mp3 \
+    --enable-demuxer=wav \
+    --enable-muxer=mp3 \
+    --enable-muxer=segment \
+    --enable-protocol=file \
+    --enable-filter=highpass \
+    --enable-filter=afftdn \
+    --enable-filter=deesser \
+    --enable-filter=loudnorm \
+    --enable-filter=agate \
+    --enable-filter=adynamiceq \
+    --enable-filter=alimiter \
+    --enable-filter=superequalizer \
+    --enable-filter=asoftclip \
+    --enable-filter=astats \
+    --enable-filter=ametadata \
+    --disable-programs \
+    --enable-ffmpeg \
+    --enable-ffprobe \
+    --disable-doc \
+    --disable-network \
+    --disable-autodetect && \
+    make -j$(nproc) && \
+    make install
+
+
+# --- Stage 2: The Final Base Image ---
+FROM alpine:3.20
+
+# CORRECTED: Install ALL essential RUNTIME dependencies for the entire application.
+RUN apk add --no-cache \
+    lame-libs \
+    jq \
+    bc \
+    coreutils \
+    inotify-tools \
+    aws-cli
+
+# Copy our custom-compiled ffmpeg and ffprobe from the builder stage
+COPY --from=builder /usr/local/bin/ffmpeg /usr/local/bin/
+COPY --from=builder /usr/local/bin/ffprobe /usr/local/bin/
+
+# Set a default working directory
+WORKDIR /app
